@@ -184,7 +184,7 @@ def build_preprocessor(
 
 def categorical_mask(preprocessor: Pipeline) -> list[bool]:
     """For a fitted "tree" preprocessor: True for the ordinal-coded categorical columns.
-    Pass it to HistGradientBoostingClassifier(categorical_features=...)."""
+    Used in STEP 5 to tell LightGBM which columns are categorical."""
     cat_cols = preprocessor.named_steps["encode"].transformers_[1][2]
     return [name in cat_cols for name in preprocessor.get_feature_names_out()]
 
