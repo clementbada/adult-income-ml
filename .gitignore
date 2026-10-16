@@ -218,3 +218,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Project-specific (adult-income-ml) ----
+# Data: never committed (downloaded and split by src/data.py)
+data/
+*.parquet
+# Experiment tracking and model artefacts (large files)
+mlruns/
+mlartifacts/
+models/*.joblib
+models/*.pkl
+# macOS
+.DS_Store
