@@ -1,0 +1,12 @@
+# Pinned versions: everyone in the group (and the grader) gets exactly the same libraries.
+# Libraries are added step by step, when a step starts using them.
+
+# STEP 0 / STEP 1: data handling, split, figures, configuration, tests
+numpy==2.2.6
+pandas==2.2.3
+scikit-learn==1.6.1
+matplotlib==3.10.3
+seaborn==0.13.2
+pyarrow==20.0.0
+PyYAML==6.0.2
+pytest==8.3.5

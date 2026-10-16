@@ -1,0 +1,19 @@
+# Project configuration: every value we may want to change lives here, not in the code.
+# Same content as the CONFIG dictionary of notebook 01. New sections are added by later steps.
+
+seed: 42                      # fixed random seed, used everywhere -> reproducible results
+
+data:
+  openml_name: adult          # Adult / Census Income
+  openml_version: 2
+  target_column: class        # raw target column
+  positive_label: ">50K"      # positive class (Y = 1)
+  raw_cache_dir: data/raw     # local copy of the OpenML download (not committed)
+  processed_dir: data/processed   # dev / test split files (not committed)
+
+split:
+  test_size: 0.20             # 80% development / 20% test, stratified on the target
+  n_folds: 5                  # 5-fold StratifiedKFold inside the development set
+
+paths:
+  figures_dir: reports/figures
