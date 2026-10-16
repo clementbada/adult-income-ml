@@ -17,3 +17,13 @@ split:
 
 paths:
   figures_dir: reports/figures
+
+features:                     # STEP 2 (src/features.py)
+  capital: indicators         # decision 7: has_capital_gain / has_capital_loss only
+                              # ("amounts" = STEP 6 reference, "none" = no capital information)
+  bands: [age_band, hours_band]   # added for the linear model only (trees find their own cut points)
+  age_bins: [0, 25, 35, 45, 55, 65, .inf]          # right-inclusive edges: life stages
+  age_labels: ["17-25", "26-35", "36-45", "46-55", "56-65", "66+"]
+  hours_bins: [-.inf, 34, 40, 49, .inf]            # part-time / standard week / 41-49 / long hours
+  hours_labels: ["<35", "35-40", "41-49", "50+"]
+  rare_min_frequency: 0.005   # categories below 0.5% of training rows are grouped

@@ -42,3 +42,32 @@ Details, numbers and figures: `notebooks/01_EDA_framing_split.ipynb`. Code: `src
 ### Notes for STEP 2
 `has_capital_gain` / `has_capital_loss`; age bands (bell-shaped relation, for the linear model); hours bands;
 group rare `native-country` values (38 of 41 countries below 0.5%).
+
+---
+
+## STEP 2 - Feature engineering (lead: Eliott)
+Details, numbers and figures: `notebooks/02_feature_engineering.ipynb`. Code: `src/features.py`.
+Settings: `config.yaml`, section `features`. Tests: `tests/test_features.py`.
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 12 | Two-layer Pipeline: stateless `AdultFeatureBuilder` (row rules), then a learned `ColumnTransformer` (imputation, encoding, scaling) | Anything learned from data must be fitted on training folds only; production receives raw rows | - | `src/features.py` |
+| 13 | Two preprocessors: `linear` (one-hot, scaling, bands) and `tree` (ordinal codes, no scaling, no bands) | Linear models cannot cut variables into ranges and are scale-sensitive; trees can and are not | - | `build_preprocessor(cfg, family)` |
+| 14 | Implements decisions 3, 4, 7, 8, 9: `fnlwgt`, `education`, `sex`, `race` and the capital amounts never reach the model; `Husband`/`Wife` -> `Spouse` (45.1% >50K) | STEP 1 | - | `AdultFeatureBuilder` |
+| 15 | Missing categorical -> `"Missing"` (decision 5); median imputer on numbers as a safeguard | Missingness informative (9.5% vs 24.8%); a production row may be incomplete | Missingness caused by another process in production | `ColumnTransformer` |
+| 16 | One-hot for linear, categories < 0.5% of training rows grouped (38 countries = 5.9% of rows), unknown categories tolerated; ordinal codes for trees (`categorical_mask` for HistGradientBoosting); no target encoding | No order between categories; rare levels give noisy coefficients; target encoding adds a leakage risk for no need (max 42 levels) | Rare countries carrying signal (checkable in STEP 4) | `ColumnTransformer` |
+| 17 | Engineered: `has_capital_gain`, `has_capital_loss` (all models); `age_band` (6), `hours_band` (4), linear only; no `net_capital` | Indicators: decision 7. Bands: bell-shaped age, stepped hours. A loss signals wealth (50.0% >50K), a net value would reverse it | Linear model still underfitting age (-> spline) | `AdultFeatureBuilder`, `config.yaml` |
+| 18 | `capital` option: `indicators` (default), `amounts` (log1p for linear, raw for trees), `none` | STEP 6 must rebuild the "exact amounts" reference with the same code | - | `config.yaml`, `build_preprocessor` |
+| 19 | Evidence (default logistic regression, 5-fold CV, PR-AUC): 0.688 no capital, no band -> 0.729 indicators -> 0.745 with both bands; bands better on 5/5 folds | A feature is kept only if it improves the honest score | - | notebook 02, Part F |
+
+### Limitation
+Band edges were chosen after the STEP 1 EDA, which looked at all rows. Edges are round and domain-based (life stages,
+part-time below 35 hours), not tuned on the target, and the shape is re-checked on the development set only.
+
+### Notes for STEP 3 and STEP 4
+- Class weights or resampling go **after** the preprocessor (resampling requires an `imblearn` Pipeline).
+- Logistic regression: `build_preprocessor(cfg, "linear")`; trees: `build_preprocessor(cfg, "tree")`;
+  `HistGradientBoostingClassifier(categorical_features=categorical_mask(fitted_pre))`.
+- Linear reference to beat: PR-AUC 0.745 (default logistic regression).
+- STEP 8 (SHAP): with one-hot, sum SHAP values per original variable for the global view.

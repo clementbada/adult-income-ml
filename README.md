@@ -17,6 +17,7 @@ requirements.txt     pinned Python libraries
 DECISIONS.md         log of every methodological decision (feeds the report)
 src/                 main implementation (Python modules, one per pipeline stage)
   data.py            STEP 1: load data, remove exact duplicates, stratified 80/20 split
+  features.py        STEP 2: feature builder + preprocessing Pipeline (linear / tree)
 notebooks/           supplementary material: exploration and figures, one notebook per step
 tests/               automated checks (pytest)
 reports/figures/     figures used in the report
@@ -33,6 +34,7 @@ pip install -r requirements.txt
 ## How to run
 ```bash
 python -m src.data      # download the data, remove duplicates, create the dev/test split
+python -m src.features  # fit every preprocessing variant on the dev set (sanity check)
 pytest                  # run the tests
 ```
 
