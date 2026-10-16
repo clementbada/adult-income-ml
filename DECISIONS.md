@@ -71,3 +71,26 @@ part-time below 35 hours), not tuned on the target, and the shape is re-checked 
   LightGBM (STEP 5): pass the categorical columns given by `categorical_mask(fitted_pre)`.
 - Linear reference to beat: PR-AUC 0.745 (default logistic regression).
 - STEP 8 (SHAP): with one-hot, sum SHAP values per original variable for the global view.
+
+---
+
+## STEP 3 - Baseline, evaluation module, experiment tracking (lead: Clément)
+Details, numbers and figures: `notebooks/03_baseline_evaluation.ipynb`. Code: `src/evaluate.py`, `src/models.py`,
+`src/tracking.py`. Settings: `config.yaml`, sections `models`, `evaluation`, `tracking`. Tests: `tests/test_models.py`.
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 20 | One evaluation function for every model: PR-AUC (main, random baseline = prevalence), ROC-AUC, log-loss, precision, recall, F1, confusion matrix | Same metrics, same folds, fair comparison (requirement 4); PR-AUC suits a 23.9% minority class (S6) | - | `src/evaluate.py` |
+| 21 | Threshold-dependent metrics reported at 0.5 only as a reference | No universal threshold (S6); the operating threshold is chosen in STEP 4 on out-of-fold predictions | - | `config.yaml` (`evaluation`) |
+| 22 | Cross-validation keeps out-of-fold predictions; the full Pipeline is refitted on each training fold | No leakage from the validation fold; OOF predictions needed for STEP 4 (threshold) and STEP 7 (calibration) | - | `cross_validate_oof` |
+| 23 | Baseline = logistic regression, L2 penalty, C = 1 (default), scaled inputs | Course reference model (S1); L2 keeps correlated coefficients stable (S2); C chosen in STEP 5 | - | `src/models.py`, `config.yaml` (`models`) |
+| 24 | Baseline result (5-fold CV, development set): PR-AUC 0.745 +/- 0.012, ROC-AUC 0.901 +/- 0.005, log-loss 0.328; at t = 0.5 precision 0.724, recall 0.595, F1 0.653 | Reference every later model must beat | - | notebook 03 |
+| 25 | MLflow logs every run (parameters, per-fold and summary metrics, artifacts) in the local `mlruns/` folder | Requirement 7; needed for the Optuna trials of STEP 5 | Session 10 using another tool | `src/tracking.py` |
+| 26 | Business priority = recall: a missed wealthy prospect (FN) costs more than a useless call (FP), so the operating threshold will favour recall over precision | Lost client and fees vs a few minutes of advisor time (STEP 1, A.3); the baseline at 0.5 misses 40% of the >50K prospects | Fixed advisor capacity (then precision / number of calls drives the threshold) | STEP 4 (threshold choice) |
+
+### Notes for STEP 4
+At t = 0.5 the baseline misses 40% of the >50K prospects (3,785 of 9,345 on the development set). Decision 26: the
+threshold is chosen on OOF predictions with an explicit business cost where a false negative costs more than a false
+positive (Session 6); the cost ratio is set and justified in STEP 4. Compare on the same folds: threshold tuning on OOF predictions, then `class_weight="balanced"`, then SMOTE inside an `imblearn` Pipeline
+(training folds only). PR-AUC is not expected to change with the threshold; precision, recall and F1 will.

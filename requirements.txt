@@ -14,3 +14,6 @@ pytest==8.3.5
 
 # STEP 1 (capital check, notebook 01) and STEP 5: gradient-boosted trees (Session 4)
 lightgbm==4.6.0
+
+# STEP 3: experiment tracking (requirement 7)
+mlflow==2.22.0

@@ -18,6 +18,9 @@ DECISIONS.md         log of every methodological decision (feeds the report)
 src/                 main implementation (Python modules, one per pipeline stage)
   data.py            STEP 1: load data, remove exact duplicates, stratified 80/20 split
   features.py        STEP 2: feature builder + preprocessing Pipeline (linear / tree)
+  evaluate.py        STEP 3: metrics (PR-AUC, ROC-AUC, log-loss, precision, recall, F1) + cross-validation
+  models.py          STEP 3: baseline logistic regression Pipeline
+  tracking.py        STEP 3: MLflow experiment tracking
 notebooks/           supplementary material: exploration and figures, one notebook per step
 tests/               automated checks (pytest)
 reports/figures/     figures used in the report
@@ -35,6 +38,8 @@ pip install -r requirements.txt
 ```bash
 python -m src.data      # download the data, remove duplicates, create the dev/test split
 python -m src.features  # fit every preprocessing variant on the dev set (sanity check)
+python -m src.models    # STEP 3: cross-validate the baseline and log it in MLflow
+mlflow ui               # browse the logged runs at http://127.0.0.1:5000
 pytest                  # run the tests
 ```
 
