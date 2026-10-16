@@ -11,3 +11,6 @@ seaborn==0.13.2
 pyarrow==20.0.0
 PyYAML==6.0.2
 pytest==8.3.5
+
+# STEP 1 (capital check, notebook 01) and STEP 5: gradient-boosted trees (Session 4)
+lightgbm==4.6.0
