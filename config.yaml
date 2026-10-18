@@ -33,6 +33,17 @@ models:                       # STEP 3 (src/models.py); tuned with Optuna in STE
     penalty: l2               # Ridge penalty (Session 2): shrinks coefficients, stable with correlated inputs
     C: 1.0                    # C = 1 / lambda (scikit-learn default); chosen in STEP 5
     max_iter: 2000            # enough iterations for the solver to converge
+  random_forest:              # STEP 5: default values; the ones in tuning.search_spaces are tuned
+    n_estimators: 300         # number of trees averaged
+    min_samples_leaf: 1       # minimum number of people in a leaf
+    max_features: sqrt        # share of columns tried at each split
+    n_jobs: -1                # use every CPU core
+  lightgbm:                   # STEP 5: default values; the ones in tuning.search_spaces are tuned
+    n_estimators: 300         # number of boosting rounds (trees added one after the other)
+    learning_rate: 0.05       # how much each new tree corrects the previous ones
+    num_leaves: 31            # size of each tree
+    subsample_freq: 1         # needed for `subsample` (row sampling) to be active at every round
+    verbose: -1               # no LightGBM log lines
 
 evaluation:
   default_threshold: 0.5      # reference only; the operating threshold is chosen in STEP 4

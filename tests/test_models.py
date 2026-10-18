@@ -78,3 +78,73 @@ def test_mlflow_run_is_logged(tmp_path):
     run = mlflow.get_run(run_id)
     assert run.data.params["C"] == "1.0"
     assert run.data.metrics["cv_pr_auc_mean"] == pytest.approx(0.55)
+
+
+# ---------------------------------------------------------------------------------------------
+# STEP 5: Random Forest and LightGBM
+# ---------------------------------------------------------------------------------------------
+from src.models import build_lightgbm, build_model, build_random_forest  # noqa: E402
+
+
+@pytest.mark.parametrize("builder,options", [
+    (build_random_forest, {"encoding": "onehot"}),
+    (build_random_forest, {"encoding": "ordinal"}),
+    (build_lightgbm, {}),
+])
+def test_tree_pipelines_run_on_raw_data(builder, options):
+    cfg = load_config()
+    X, y = _raw_frame()
+    pipe = builder(cfg, n_estimators=20, **options).fit(X, y)
+    proba = pipe.predict_proba(X)[:, 1]
+    assert proba.shape == (len(X),) and ((proba >= 0) & (proba <= 1)).all()
+
+
+def test_tree_pipelines_tolerate_an_unknown_category():
+    cfg = load_config()
+    X, y = _raw_frame()
+    new = X.iloc[[0, 1]].copy()
+    new["native-country"] = pd.Categorical(["Atlantis", "Atlantis"])
+    for name in ["random_forest", "lightgbm"]:
+        pipe = build_model(name, cfg, n_estimators=20).fit(X, y)
+        assert pipe.predict_proba(new).shape == (2, 2)
+
+
+def test_lightgbm_receives_categorical_columns_and_no_sensitive_column():
+    cfg = load_config()
+    X, y = _raw_frame()
+    pipe = build_lightgbm(cfg, n_estimators=20).fit(X, y)
+    Xt = X
+    for _, step in pipe.steps[:-1]:          # everything before the model (already fitted)
+        Xt = step.transform(Xt)
+    assert not any(c in Xt.columns for c in ["sex", "race", "fnlwgt", "education"])
+    cat_cols = [c for c in Xt.columns if str(Xt[c].dtype) == "category"]
+    assert cat_cols == ["workclass", "marital-status", "occupation", "relationship", "native-country"]
+    # LightGBM really treats them as categorical: its trees contain categorical splits ("==")
+    dump = pipe.named_steps["model"].booster_.dump_model()
+    split_types = set()
+
+    def walk(node):
+        if "split_feature" in node:
+            split_types.add((dump["feature_names"][node["split_feature"]], node["decision_type"]))
+            walk(node["left_child"])
+            walk(node["right_child"])
+
+    for tree in dump["tree_info"]:
+        walk(tree["tree_structure"])
+    categorical_splits = {name for name, kind in split_types if kind == "=="}
+    assert categorical_splits and categorical_splits <= set(cat_cols)
+
+
+def test_lightgbm_one_row_gives_the_same_prediction_as_the_batch():
+    """Pandas categories are rebuilt for every input: the codes must keep the same meaning."""
+    cfg = load_config()
+    X, y = _raw_frame()
+    pipe = build_lightgbm(cfg, n_estimators=20).fit(X, y)
+    batch = pipe.predict_proba(X.iloc[:30])[:, 1]
+    one_by_one = np.array([pipe.predict_proba(X.iloc[[i]])[0, 1] for i in range(30)])
+    assert np.allclose(batch, one_by_one)
+
+
+def test_build_model_rejects_unknown_names():
+    with pytest.raises(ValueError):
+        build_model("svm", load_config())
