@@ -37,10 +37,15 @@ def log_cv_run(
     per_fold: pd.DataFrame,
     tags: dict[str, str] | None = None,
     figures: list[str | Path] | None = None,
+    nested: bool = False,
 ) -> str:
-    """Log one cross-validated model as one MLflow run. Returns the run id."""
+    """Log one cross-validated model as one MLflow run. Returns the run id.
+
+    nested=True (STEP 5): the run is created as a child of the run currently open, e.g. one child run
+    per Optuna trial under the parent run of the model being tuned.
+    """
     summary = summarize(per_fold)
-    with mlflow.start_run(run_name=run_name) as run:
+    with mlflow.start_run(run_name=run_name, nested=nested) as run:
         mlflow.set_tags(tags or {})
         mlflow.log_params(params)
         for m in METRIC_NAMES:

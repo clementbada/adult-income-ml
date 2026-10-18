@@ -57,3 +57,36 @@ imbalance:                    # STEP 4 (src/imbalance.py), Session 6
   cost_fn: 5                  # one missed >50K prospect = 5 units: ~EUR 300 expected value vs ~EUR 50 per call (decision 27)
   cost_fn_sensitivity: [2, 3, 5, 10]   # robustness check of the business assumption
   remedy: threshold_only      # chosen in STEP 4: same result as class weights / SMOTE, probabilities kept intact
+
+tuning:                       # STEP 5 (src/tuning.py): Optuna, requirement 6
+  results_dir: reports/tuning # tables read by notebook 05 (small CSV / YAML files, committed)
+  sampler_seed: 42            # TPE sampler seed: the same trials are proposed at every run
+  n_startup_trials: 10        # first trials drawn at random, before TPE starts to learn
+  pruner_warmup_folds: 2      # a trial can be stopped early only after its first 2 folds
+  n_trials:                   # trials per model, 5-fold CV each (logistic has 1 hyperparameter)
+    logistic: 20
+    random_forest: 40
+    lightgbm: 60
+  nested:                     # nested CV (Session 5): honest score of "tune with Optuna, then fit"
+    inner_folds: 3            # inner CV used by Optuna inside each of the 5 outer folds
+    n_trials:                 # smaller budget: 5 outer folds x n_trials x 3 inner fits
+      logistic: 10
+      random_forest: 15
+      lightgbm: 20
+  search_spaces:              # type: float / int / categorical; log: true = log scale
+    logistic:
+      C: {type: float, low: 0.001, high: 100.0, log: true}          # regularisation strength (1 / lambda)
+    random_forest:
+      encoding: {type: categorical, choices: [onehot, ordinal]}     # how categories reach the trees (decision 33)
+      n_estimators: {type: int, low: 100, high: 500, step: 50}       # more trees = more stable average
+      max_depth: {type: int, low: 4, high: 30}                       # depth of each tree (bias / variance)
+      min_samples_leaf: {type: int, low: 1, high: 50, log: true}     # bigger leaves = smoother model
+      max_features: {type: float, low: 0.05, high: 0.7}              # share of columns tried at each split
+    lightgbm:
+      n_estimators: {type: int, low: 100, high: 2000, step: 50}      # number of boosting rounds
+      learning_rate: {type: float, low: 0.01, high: 0.2, log: true}  # step size of each round
+      num_leaves: {type: int, low: 8, high: 128, log: true}          # size (complexity) of each tree
+      min_child_samples: {type: int, low: 5, high: 200, log: true}   # minimum people per leaf
+      reg_lambda: {type: float, low: 0.001, high: 100.0, log: true}  # L2 penalty on leaf values (Session 2 idea)
+      subsample: {type: float, low: 0.5, high: 1.0}                  # share of rows used by each tree
+      colsample_bytree: {type: float, low: 0.2, high: 1.0}           # share of columns used by each tree
