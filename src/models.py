@@ -18,6 +18,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as ImbPipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
@@ -26,16 +28,34 @@ from src.features import build_preprocessor
 logger = logging.getLogger(__name__)
 
 
-def build_logistic(cfg: dict[str, Any], **overrides: Any) -> Pipeline:
-    """Full Pipeline: STEP 2 'linear' preprocessor + logistic regression."""
+def build_logistic(
+    cfg: dict[str, Any], class_weight: str | None = None, smote: bool = False, **overrides: Any,
+) -> Pipeline:
+    """Full Pipeline: STEP 2 'linear' preprocessor + logistic regression.
+
+    STEP 4 options (class-imbalance remedies, Session 6):
+    - class_weight="balanced": errors on the minority class (>50K) weigh n_neg / n_pos ~ 3.2 times
+      more in the training loss;
+    - smote=True: SMOTE creates synthetic >50K rows. It sits INSIDE an imblearn Pipeline, after the
+      preprocessing, so it only ever runs on the training folds (validation and test keep the real
+      class distribution).
+    """
     params = {**cfg["models"]["logistic"], **overrides}
     model = LogisticRegression(
         penalty=params["penalty"],
         C=params["C"],
         max_iter=params["max_iter"],
+        class_weight=class_weight,
         random_state=cfg["seed"],
     )
-    return Pipeline([("preprocess", build_preprocessor(cfg, family="linear")), ("model", model)])
+    preprocess = build_preprocessor(cfg, family="linear")
+    if smote:
+        # imblearn does not accept a nested Pipeline as a step: the two preprocessing steps
+        # (feature builder, column transformer) are inserted one by one.
+        return ImbPipeline([*preprocess.steps,
+                            ("smote", SMOTE(random_state=cfg["seed"])),
+                            ("model", model)])
+    return Pipeline([("preprocess", preprocess), ("model", model)])
 
 
 def main() -> None:

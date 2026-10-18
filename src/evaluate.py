@@ -83,3 +83,42 @@ def format_summary(per_fold: pd.DataFrame) -> dict[str, str]:
     """'0.745 +/- 0.009' strings, for printing and for the report."""
     s = summarize(per_fold)
     return {m: f"{s.loc[m, 'mean']:.3f} +/- {s.loc[m, 'std']:.3f}" for m in METRIC_NAMES}
+
+
+# ----------------------------------------------------------------------------------------------
+# STEP 4 - Business cost and threshold choice (Session 6: "business cost of FP and FN under a
+# chosen operating policy"). A missed wealthy prospect (FN) costs `cost_fn`, a useless call (FP)
+# costs `cost_fp`. The threshold is chosen on OUT-OF-FOLD predictions, never on the test set.
+# ----------------------------------------------------------------------------------------------
+THRESHOLD_GRID = np.round(np.arange(0.01, 1.00, 0.01), 2)
+
+
+def threshold_table(
+    y_true: np.ndarray | pd.Series, proba: np.ndarray, cost_fn: float, cost_fp: float = 1.0,
+    thresholds: np.ndarray = THRESHOLD_GRID,
+) -> pd.DataFrame:
+    """For every candidate threshold: calls made, wealthy found / missed, precision, recall, cost."""
+    y_true = np.asarray(y_true)
+    rows = []
+    for t in thresholds:
+        pred = proba >= t
+        tp = int((pred & (y_true == 1)).sum())
+        fp = int((pred & (y_true == 0)).sum())
+        fn = int((~pred & (y_true == 1)).sum())
+        rows.append({
+            "threshold": float(t), "calls": tp + fp, "tp": tp, "fp": fp, "fn": fn,
+            "precision": tp / (tp + fp) if tp + fp else 0.0,
+            "recall": tp / (tp + fn) if tp + fn else 0.0,
+            "cost": cost_fn * fn + cost_fp * fp,
+        })
+    return pd.DataFrame(rows)
+
+
+def best_threshold(
+    y_true: np.ndarray | pd.Series, proba: np.ndarray, cost_fn: float, cost_fp: float = 1.0,
+    thresholds: np.ndarray = THRESHOLD_GRID,
+) -> float:
+    """Threshold with the lowest total business cost (ties -> the highest threshold, fewer calls)."""
+    table = threshold_table(y_true, proba, cost_fn, cost_fp, thresholds)
+    best = table[table["cost"] == table["cost"].min()]
+    return float(best["threshold"].max())

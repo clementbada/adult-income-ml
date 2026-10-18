@@ -94,3 +94,26 @@ At t = 0.5 the baseline misses 40% of the >50K prospects (3,785 of 9,345 on the 
 threshold is chosen on OOF predictions with an explicit business cost where a false negative costs more than a false
 positive (Session 6); the cost ratio is set and justified in STEP 4. Compare on the same folds: threshold tuning on OOF predictions, then `class_weight="balanced"`, then SMOTE inside an `imblearn` Pipeline
 (training folds only). PR-AUC is not expected to change with the threshold; precision, recall and F1 will.
+
+---
+
+## STEP 4 - Class imbalance (lead: Clément)
+Details, numbers and figures: `notebooks/04_class_imbalance.ipynb`. Code: `src/imbalance.py`, `src/evaluate.py`
+(`threshold_table`, `best_threshold`), `src/models.py` (`class_weight`, `smote` options). Settings: `config.yaml`,
+section `imbalance`. Tests: `tests/test_imbalance.py`.
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 27 | Business cost = 5 x missed wealthy prospects + 1 x useless calls (X = 5) | Useless call ~ EUR 50 (30 min of advisor time); contacted wealthy prospect ~ EUR 300 expected value (10% x 1% fees on EUR 300k, first year only); ratio ~ 6 rounded down | Different business numbers; fixed advisor capacity | `config.yaml` (`imbalance`) |
+| 28 | The threshold minimises the business cost on out-of-fold predictions: **0.17** for the baseline | Course rule: no universal threshold, chosen on development data, never on the test set (S6); flat minimum (0.13-0.20 within 1% of the lowest cost) and stable per fold (0.12-0.19) | - | `best_threshold`, `src/imbalance.py` |
+| 29 | Remedy kept: **threshold tuning only** (no class weights, no SMOTE) | Same PR-AUC and same business cost (differences ~20, fold std ~80); class weights and SMOTE worsen log-loss (0.328 -> 0.40) and SMOTE creates unrealistic one-hot rows; least invasive (S6 hierarchy) | Another model where a remedy clearly lowers the cost | `config.yaml` (`imbalance.remedy`) |
+| 30 | Sensitivity X = 2, 3, 5, 10: same remedy conclusion for every X; marginal price 3.5 / 5.4 / 7.4 calls per extra wealthy client | Shows the decision does not hinge on the exact assumption | - | notebook 04, Part E |
+| 31 | Result (development, out-of-fold): wealthy found 60% -> 90%, calls 20% -> 43% of prospects, precision 72% -> 51%, business cost -40%; PR-AUC unchanged (0.745) | Threshold changes the operating point, not the ranking (S6) | Test-set confirmation (STEP 6) | notebook 04, Part F |
+| 32 | Honest check of the threshold choice: threshold chosen on 4 folds, cost measured on the 5th (cross-validated threshold) | Choosing and measuring on the same predictions is optimistic (like an in-sample backtest); measured optimism only ~0.6% (12,752 vs 12,681), thresholds 0.16-0.19 | - | `cross_validated_threshold`, notebook 04 F.2 |
+
+### Notes for the next steps
+- **STEP 5:** Random Forest and LightGBM are tuned **without** class weights / `scale_pos_weight`, and their threshold is chosen with the same business cost. Optionally, `scale_pos_weight` (S6) can be checked for LightGBM with the same rule.
+- **STEP 6:** the threshold is recomputed for the final model on its own out-of-fold predictions (the 0.17 belongs to the baseline), then applied once to the test set.
+- **STEP 7:** keeping the threshold rather than class weights preserves the probabilities, so calibration starts from honest probabilities.
+- **STEP 9:** lowering the threshold to 0.17 doubles the number of people contacted; check the selection rate by sex and race on the final model.

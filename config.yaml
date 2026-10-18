@@ -40,3 +40,9 @@ evaluation:
 tracking:                     # MLflow (requirement 7)
   experiment_name: adult-income
   tracking_dir: mlruns        # local folder, not committed
+
+imbalance:                    # STEP 4 (src/imbalance.py), Session 6
+  cost_fp: 1                  # one useless call = 1 unit (reference)
+  cost_fn: 5                  # one missed >50K prospect = 5 units: ~EUR 300 expected value vs ~EUR 50 per call (decision 27)
+  cost_fn_sensitivity: [2, 3, 5, 10]   # robustness check of the business assumption
+  remedy: threshold_only      # chosen in STEP 4: same result as class weights / SMOTE, probabilities kept intact
