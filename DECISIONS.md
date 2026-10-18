@@ -117,3 +117,49 @@ section `imbalance`. Tests: `tests/test_imbalance.py`.
 - **STEP 6:** the threshold is recomputed for the final model on its own out-of-fold predictions (the 0.17 belongs to the baseline), then applied once to the test set.
 - **STEP 7:** keeping the threshold rather than class weights preserves the probabilities, so calibration starts from honest probabilities.
 - **STEP 9:** lowering the threshold to 0.17 doubles the number of people contacted; check the selection rate by sex and race on the final model.
+
+---
+
+## STEP 5 - Three models, Optuna tuning, MLflow (lead: Lucas)
+Details, numbers and figures: `notebooks/05_models_tuning.ipynb`. Code: `src/models.py` (`build_random_forest`,
+`build_lightgbm`, `ToCategory`, `build_model`), `src/tuning.py`, `src/tracking.py` (`nested` option). Settings:
+`config.yaml`, sections `models` and `tuning`. Results: `reports/tuning/`. Tests: `tests/test_models.py`,
+`tests/test_tuning.py`. Run: `python -m src.tuning` (about 30 min on 4 cores).
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 33 | Random Forest: the categorical encoding (one-hot or ordinal) is a hyperparameter chosen by Optuna; LightGBM: native categorical columns (pandas 'category') | sklearn's RF reads ordinal codes as ordered numbers; the better encoding depends on the other settings (Part B); LightGBM groups categories natively | - | `src/models.py`, `config.yaml` |
+| 34 | Optuna (TPE sampler, seed 42, 10 random start trials, median pruner after 2 folds) maximises the mean PR-AUC over the 5 folds; 20 / 40 / 60 trials; search ranges widened until no best value sits on an edge | PR-AUC is the main metric (decision 1); the cost depends on the threshold, chosen afterwards (decision 28); pruning saves about a third of the time | A best value on the edge of a range | `src/tuning.py`, `config.yaml` (`tuning`) |
+| 35 | Candidate final model: **LightGBM** (PR-AUC 0.752 vs 0.745, cost -2.4%, better on 5/5 folds), threshold 0.15 at X = 5 | Consistent paired gain over the tuned logistic regression; the Random Forest brings no regular gain | No gain on the test set (STEP 6) -> keep the logistic regression | `reports/tuning/`, notebook 05 |
+| 36 | LightGBM: threshold only, no `is_unbalance` / `scale_pos_weight` | Same PR-AUC, no regular cost gain (2 folds better, 3 worse), log-loss 0.32 -> 0.39 | - | notebook 05, Part E |
+| 37 | Nested CV (5 outer folds, Optuna on 3 inner folds) confirms the scores: optimism at most 0.002 PR-AUC, same ranking | Requirement 6: the reported score must not be optimistic (S5) | - | `nested_cv`, notebook 05, Part F |
+| 38 | Every Optuna trial (complete or pruned) is an MLflow child run under one parent run per model, plus a final run and a nested-CV run per model | Requirement 7: every run, parameters, metrics and artifacts, for all three models | - | `src/tuning.py`, `src/tracking.py` |
+
+### Results (development set, same 5 folds as STEPS 1-4)
+| Model | PR-AUC | ROC-AUC | Log-loss | Threshold (X = 5) | Recall | Precision | Cost | Honest cost | Nested PR-AUC |
+|---|---|---|---|---|---|---|---|---|---|
+| Logistic regression (C = 3.5) | 0.745 | 0.901 | 0.328 | 0.17 | 90.5% | 50.7% | 12,674 | 12,748 | 0.745 |
+| Random Forest (one-hot, 350 trees, depth 20) | 0.746 | 0.903 | 0.326 | 0.18 | 91.0% | 50.3% | 12,610 | 12,679 | 0.744 |
+| LightGBM (350 rounds, lr 0.024, 21 leaves) | **0.752** | **0.905** | **0.323** | 0.15 | 91.6% | 50.3% | **12,376** | **12,490** | **0.752** |
+
+Paired differences with the tuned logistic regression (fold by fold): LightGBM +0.0074 +/- 0.0037 PR-AUC (better on
+5/5 folds), cost -60 per fold (lower on 5/5 folds); Random Forest +0.0014 PR-AUC (4/5), cost -13 per fold (3/5).
+
+### Notes for the next steps
+- **STEP 6:** refit the LightGBM Pipeline with `reports/tuning/best_params.yaml` on the whole development set and
+  evaluate it **once** on the test set, with the tuned logistic regression as the reference. The threshold (0.15)
+  must be **applied by the delivered model** (for example `FixedThresholdClassifier`, scikit-learn >= 1.5, or the
+  threshold saved next to the Pipeline); otherwise `predict()` still answers at 0.5.
+- **STEP 6:** also report the "amounts" reference (exact capital amounts, decision 7): the tree models gain little
+  here partly because these amounts were removed.
+- **STEP 7:** LightGBM keeps unweighted probabilities (decision 36), so calibration starts from its out-of-fold
+  predictions in `reports/tuning/oof_predictions.csv`.
+- **Early stopping (Session 4)** is not used: Optuna tunes `n_estimators` together with `learning_rate`, which
+  plays the same role (small learning rate + more rounds, Part C.3 of notebook 05). Early stopping would need a third
+  split inside each training fold; it is an option if the training time becomes a problem.
+- **Nested CV budget:** the nested CV uses fewer trials (10 / 15 / 20) and 3 inner folds, so it estimates a slightly
+  cheaper version of the tuning procedure; with a flat top of the search space (Part C.3) the difference is small.
+- **Decision 29 (STEP 4):** with the same paired comparison as here, class weights lowered the cost on 5/5 folds
+  (about -17 per fold, 0.7%) for the logistic regression. "Threshold only" stays the right choice, but the reason is
+  the probabilities (log-loss 0.33 -> 0.40), not "same cost".

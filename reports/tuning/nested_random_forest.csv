@@ -1,0 +1,6 @@
+outer_fold,inner_best_pr_auc,outer_pr_auc,outer_roc_auc,outer_log_loss,best_params
+1,0.7421853043175025,0.7415503986714462,0.8988456335225005,0.3365101661000317,"{'encoding': 'ordinal', 'n_estimators': 200, 'max_depth': 17, 'min_samples_leaf': 9, 'max_features': 0.18106704306550228}"
+2,0.7428491967633585,0.734268134520071,0.8972618069976164,0.33921607225123224,"{'encoding': 'ordinal', 'n_estimators': 150, 'max_depth': 17, 'min_samples_leaf': 8, 'max_features': 0.08019276826799852}"
+3,0.7431427399539215,0.7461350438232635,0.9012685633609833,0.3343688264104832,"{'encoding': 'ordinal', 'n_estimators': 150, 'max_depth': 17, 'min_samples_leaf': 8, 'max_features': 0.08019276826799852}"
+4,0.7434371124660099,0.7405900186274179,0.9018135671564085,0.33404295356414376,"{'encoding': 'ordinal', 'n_estimators': 150, 'max_depth': 17, 'min_samples_leaf': 8, 'max_features': 0.08019276826799852}"
+5,0.7376653661475121,0.7591615987875701,0.907005319723694,0.3290012252880946,"{'encoding': 'ordinal', 'n_estimators': 150, 'max_depth': 17, 'min_samples_leaf': 8, 'max_features': 0.08019276826799852}"

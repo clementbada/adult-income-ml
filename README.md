@@ -12,19 +12,21 @@ includes a fairness audit on sex (main) and race (secondary).
 
 ## Project structure
 ```
-config.yaml          all settings (seed, split ratios, paths, later: search spaces)
+config.yaml          all settings (seed, split ratios, paths, model defaults, Optuna search spaces)
 requirements.txt     pinned Python libraries
 DECISIONS.md         log of every methodological decision (feeds the report)
 src/                 main implementation (Python modules, one per pipeline stage)
   data.py            STEP 1: load data, remove exact duplicates, stratified 80/20 split
   features.py        STEP 2: feature builder + preprocessing Pipeline (linear / tree)
   evaluate.py        STEP 3: metrics (PR-AUC, ROC-AUC, log-loss, precision, recall, F1) + cross-validation
-  models.py          STEP 3: baseline logistic regression Pipeline
+  models.py          STEP 3 / 5: the three model Pipelines (logistic regression, Random Forest, LightGBM)
   tracking.py        STEP 3: MLflow experiment tracking
   imbalance.py       STEP 4: class-imbalance remedies (threshold, class weights, SMOTE) + business cost
+  tuning.py          STEP 5: Optuna tuning of the 3 models, MLflow logging of every trial, comparison, nested CV
 notebooks/           supplementary material: exploration and figures, one notebook per step
 tests/               automated checks (pytest)
 reports/figures/     figures used in the report
+reports/tuning/      STEP 5 result tables (best hyperparameters, trials, comparison, nested CV)
 data/                downloaded and split data (created by src/data.py, not committed)
 ```
 
@@ -41,6 +43,8 @@ python -m src.data      # download the data, remove duplicates, create the dev/t
 python -m src.features  # fit every preprocessing variant on the dev set (sanity check)
 python -m src.models    # STEP 3: cross-validate the baseline and log it in MLflow
 python -m src.imbalance # STEP 4: compare the imbalance remedies and choose the threshold
+python -m src.tuning    # STEP 5: tune and compare the 3 models (about 30-40 min on a laptop)
+python -m src.tuning --n-trials 5 --skip-nested   # STEP 5 quick check (a few minutes)
 mlflow ui               # browse the logged runs at http://127.0.0.1:5000
 pytest                  # run the tests
 ```

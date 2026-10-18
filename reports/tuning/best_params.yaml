@@ -1,0 +1,16 @@
+logistic:
+  C: 3.4702669886504163
+random_forest:
+  encoding: onehot
+  n_estimators: 350
+  max_depth: 20
+  min_samples_leaf: 7
+  max_features: 0.269289335482528
+lightgbm:
+  n_estimators: 350
+  learning_rate: 0.023993242906812727
+  num_leaves: 21
+  min_child_samples: 25
+  reg_lambda: 8.43101393208247
+  subsample: 0.5998368910791798
+  colsample_bytree: 0.6113875507308892
