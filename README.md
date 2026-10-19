@@ -23,10 +23,14 @@ src/                 main implementation (Python modules, one per pipeline stage
   tracking.py        STEP 3: MLflow experiment tracking
   imbalance.py       STEP 4: class-imbalance remedies (threshold, class weights, SMOTE) + business cost
   tuning.py          STEP 5: Optuna tuning of the 3 models, MLflow logging of every trial, comparison, nested CV
+  final.py           STEP 6: refit the frozen final model on the development set, evaluate it ONCE on the test set
+  calibration.py     STEP 7: reliability diagram, Brier score, ECE, Platt / isotonic check
 notebooks/           supplementary material: exploration and figures, one notebook per step
 tests/               automated checks (pytest)
 reports/figures/     figures used in the report
-reports/tuning/      STEP 5 result tables (best hyperparameters, trials, comparison, nested CV)
+reports/tuning/      STEP 5 result tables (best hyperparameters, trials, comparison, nested CV, out-of-fold predictions)
+reports/final/       STEP 6 test results, test probabilities (reused in STEPS 7 and 9), frozen final settings
+reports/calibration/ STEP 7 calibration tables
 data/                downloaded and split data (created by src/data.py, not committed)
 ```
 
