@@ -100,3 +100,10 @@ calibration:                  # STEP 7 (src/calibration.py), Session 7
   n_bins: 10                  # equal-width bins for the reliability diagram and the ECE (as in the Session 7 notebook)
   min_folds_better: 4         # a calibrator is kept only if it lowers the Brier score on >= 4 of the 5 development folds
   results_dir: reports/calibration
+
+explain:                      # STEP 8 (src/explain.py), Session 8
+  permutation_repeats: 20     # as in the Session 8 notebook
+  pdp_features: [age, education-num, hours-per-week]
+  pdp_sample: 2000            # development rows used to average the partial dependence
+  min_wealthy_per_slice: 100  # slices with fewer wealthy people are too noisy to be called "weakest"
+  results_dir: reports/explain

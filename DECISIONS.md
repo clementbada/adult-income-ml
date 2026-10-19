@@ -211,3 +211,25 @@ learn any calibration map on predictions the model did not train on; compare bef
 ### Note for STEP 9
 Women's probabilities are slightly too low on average: check whether wealthy women are found as often as wealthy men
 at the threshold 0.15 (recall by sex), and discuss calibration within groups as one of the fairness views.
+
+---
+
+## STEP 8 - Diagnostics and explainability of the final model (lead: Eliott)
+Details, numbers and figures: `notebooks/08_explainability.ipynb`. Code: `src/explain.py`. Settings: `config.yaml`,
+section `explain`. Results: `reports/explain/`. Tests: `tests/test_explain.py`. Run: `python -m src.explain` (about 2 minutes).
+
+Course rules (Session 8): a global score hides where the model fails -> slice-based evaluation with size and prevalence,
+weakest segment defined by the decision metric, then error analysis; gain and permutation importance answer different
+questions; SHAP explains the model (global and local) on a stated scale and is not causal; PDP shows the average learned
+relationship and can query unrealistic points; the model card names the weakest segment.
+The model is the frozen final model of STEP 6; the test set only describes it, nothing is chosen here.
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 50 | 19 meaningful slices on the test set (age bands, diploma, married / not married, hours bands, sex) with n, prevalence, found / missed, precision, recall, PR-AUC at 0.15. Weakest = lowest **recall** among slices with >= 100 wealthy people -> **not married**: recall 67% (224 of 333 found), 109 of the 193 misses (56%) | A miss costs 5 calls (X = 5); tiny slices are noisy (S8). 17-25 year olds (recall 47%, 45 wealthy) and no high-school diploma (51%, 75 wealthy) shown but not conclusive | Larger test set | `slice_table`, `weakest_slice` |
+| 51 | Error analysis of the weakest slice: missed wealthy single people have less education (10.4 vs 13.1 years), fewer hours (41 vs 49), rarely a manager / professional job (28% vs 76%) or a capital gain (13% vs 42%); mean predicted 7%. Reported, not corrected (the model is frozen; a lower threshold for 94%-non-wealthy single people would multiply useless calls) | S8: inspect errors in the weakest slice | - | `error_analysis` |
+| 52 | Global importance reported with **permutation importance** on the test set (PR-AUC drop, 20 shuffles, raw columns): education-num 0.094, age 0.077, occupation 0.058, relationship 0.056, capital-gain 0.055; `sex`, `race`, `fnlwgt`, `education` = 0. Gain shown for comparison (relationship 1st with 29% of gain); `relationship` + `marital-status` read as one household signal (correlated substitutes) | Measured on new data with our metric; gain is a training statistic (S8) | - | `permutation_table`, `gain_importance` |
+| 53 | SHAP with TreeExplainer on the log-odds scale (additivity checked, max error 1.8e-14): mean |SHAP| (relationship 0.68, age 0.61, marital-status 0.59, education 0.44, occupation 0.39), beeswarm for numerical inputs, mean SHAP per category; three waterfalls chosen by a fixed rule (clear call ~90%, borderline call at 0.15, median missed wealthy single person) | Requirement 8; S8 warns to state the output scale | - | `shap_values`, `local_cases` |
+| 54 | PDP (2,000 development rows) for age (bell shape, peak about 29% at 47-52), education (rises from 9 years) and hours (rises from 35 to 50 hours) | S8: shape of the learned relationship; same bell as STEP 1 | Unrealistic combinations (S8) | notebook 08 F |
+| 55 | Drivers make business sense (career stage, education, job, hours, investments). Household signal: plausible for 1994 data, partial proxy for sex, and source of the main weakness. All explanations read as model behaviour, not causes. Model card in notebook 08, Part H | S8 | Use outside the 1994 US census population | notebook 08 G-H |

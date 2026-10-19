@@ -25,12 +25,14 @@ src/                 main implementation (Python modules, one per pipeline stage
   tuning.py          STEP 5: Optuna tuning of the 3 models, MLflow logging of every trial, comparison, nested CV
   final.py           STEP 6: refit the frozen final model on the development set, evaluate it ONCE on the test set
   calibration.py     STEP 7: reliability diagram, Brier score, ECE, Platt / isotonic check
+  explain.py         STEP 8: slices and error analysis, gain vs permutation importance, SHAP, PDP
 notebooks/           supplementary material: exploration and figures, one notebook per step
 tests/               automated checks (pytest)
 reports/figures/     figures used in the report
 reports/tuning/      STEP 5 result tables (best hyperparameters, trials, comparison, nested CV, out-of-fold predictions)
 reports/final/       STEP 6 test results, test probabilities (reused in STEPS 7 and 9), frozen final settings
 reports/calibration/ STEP 7 calibration tables
+reports/explain/     STEP 8 slices, importances, partial dependence tables
 data/                downloaded and split data (created by src/data.py, not committed)
 ```
 
@@ -51,6 +53,7 @@ python -m src.tuning    # STEP 5: tune and compare the 3 models (about 30-40 min
 python -m src.tuning --n-trials 5 --skip-nested   # STEP 5 quick check (a few minutes)
 python -m src.final     # STEP 6: refit the final model, evaluate it ONCE on the test set (~1 min)
 python -m src.calibration  # STEP 7: reliability diagram, Brier, ECE, Platt / isotonic check (seconds)
+python -m src.explain    # STEP 8: slices, gain vs permutation, SHAP, PDP (~2 min)
 mlflow ui               # browse the logged runs at http://127.0.0.1:5000
 pytest                  # run the tests
 ```
@@ -68,6 +71,10 @@ Details: `reports/final/`, `notebooks/06_final_test_evaluation.ipynb`, `DECISION
 
 Calibration (STEP 7): Brier score 0.102 (constant model 0.182), ECE 0.013; no recalibration needed (Platt A = 1.02, B = 0.01).
 Details: `reports/calibration/`, `notebooks/07_calibration.ipynb`.
+
+Explainability (STEP 8): main drivers are education, age, household role, occupation, capital gain and hours;
+`sex` and `race` have zero importance (removed by the Pipeline). Weakest segment: people who are not married
+(recall 67% vs 92% overall). Details: `reports/explain/`, `notebooks/08_explainability.ipynb` (model card in Part H).
 
 ## Use of AI assistants
 To be completed in the report (where and how AI assistants were used).
