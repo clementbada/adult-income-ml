@@ -86,4 +86,20 @@ for +5.3% business cost, PR-AUC 0.753 and less calibrated probabilities. Details
 `notebooks/09_fairness.ipynb`.
 
 ## Use of AI assistants
-To be completed in the report (where and how AI assistants were used).
+We used Claude (Anthropic) as a coding assistant throughout the project. Our programming experience was limited, so
+Claude helped us write and structure most of the code (`src/` modules, tests, notebooks) and explained the methods
+step by step. We set one rule from the start: use only the notions and tools seen in the course sessions, and flag
+anything outside them.
+
+Every result was checked and challenged against the course before being kept: we re-ran the scripts, compared each
+method with the slides and in-class notebooks, and questioned the proposals. This led to several corrections, for
+example:
+- `net_capital` (gain - loss) was dropped in STEP 2 because a capital loss signals wealth, like a gain;
+- `HistGradientBoostingClassifier` was replaced by LightGBM, the gradient-boosting library seen in Session 4;
+- the rule "if LightGBM does not win on the test set, keep the logistic regression" was removed (decision 39),
+  because the test set must measure, never choose (Session 5);
+- the threshold flat zone quoted in STEP 7 was corrected to LightGBM's own values (0.12-0.18);
+- the bootstrap interval of STEP 9 is the only tool used slightly beyond its course setting (Session 4), and is stated as such.
+
+All modelling choices, their justification and their interpretation are ours; they are documented in `DECISIONS.md`
+and in the report.
