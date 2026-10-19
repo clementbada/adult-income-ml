@@ -1,0 +1,13 @@
+set,marital status,sex,wealthy,tpr
+test before,married,Female,248.0,0.9153225806451613
+test before,married,Male,1755.0,0.9641025641025641
+test before,not married,Female,135.0,0.6148148148148148
+test before,not married,Male,198.0,0.7121212121212122
+test after,married,Female,248.0,0.9556451612903226
+test after,married,Male,1755.0,0.933903133903134
+test after,not married,Female,135.0,0.725925925925926
+test after,not married,Male,198.0,0.7727272727272727
+dev out-of-fold,married,Female,873.0,0.9381443298969072
+dev out-of-fold,married,Male,7116.0,0.9672568858909499
+dev out-of-fold,not married,Female,513.0,0.6335282651072125
+dev out-of-fold,not married,Male,843.0,0.6370106761565836

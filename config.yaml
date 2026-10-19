@@ -107,3 +107,12 @@ explain:                      # STEP 8 (src/explain.py), Session 8
   pdp_sample: 2000            # development rows used to average the partial dependence
   min_wealthy_per_slice: 100  # slices with fewer wealthy people are too noisy to be called "weakest"
   results_dir: reports/explain
+
+fairness:                     # STEP 9 (src/fairness.py), Session 9, requirement 10
+  sensitive: sex              # main protected attribute: audit + mitigation (decision 10)
+  secondary: race             # reported by group with sizes, no mitigation (decision 10)
+  group: Female               # group whose wealthy members get the training weight lam
+  lambdas: [1, 1.5, 2, 3, 4, 6, 8, 10]   # weights tried on the development set (1 = STEP 6 model)
+  max_tpr_gap: 0.03           # target for equal opportunity, fixed before the test set (3 points of recall)
+  bootstrap: 1000             # resamples of the test set for the 95% interval of the recall gap
+  results_dir: reports/fairness

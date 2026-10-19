@@ -26,6 +26,7 @@ src/                 main implementation (Python modules, one per pipeline stage
   final.py           STEP 6: refit the frozen final model on the development set, evaluate it ONCE on the test set
   calibration.py     STEP 7: reliability diagram, Brier score, ECE, Platt / isotonic check
   explain.py         STEP 8: slices and error analysis, gain vs permutation importance, SHAP, PDP
+  fairness.py        STEP 9: fairness audit by sex (Fairlearn MetricFrame), in-processing mitigation, before / after
 notebooks/           supplementary material: exploration and figures, one notebook per step
 tests/               automated checks (pytest)
 reports/figures/     figures used in the report
@@ -33,6 +34,7 @@ reports/tuning/      STEP 5 result tables (best hyperparameters, trials, compari
 reports/final/       STEP 6 test results, test probabilities (reused in STEPS 7 and 9), frozen final settings
 reports/calibration/ STEP 7 calibration tables
 reports/explain/     STEP 8 slices, importances, partial dependence tables
+reports/fairness/    STEP 9 metrics by sex and race, trade-off curve, before / after table
 data/                downloaded and split data (created by src/data.py, not committed)
 ```
 
@@ -54,6 +56,7 @@ python -m src.tuning --n-trials 5 --skip-nested   # STEP 5 quick check (a few mi
 python -m src.final     # STEP 6: refit the final model, evaluate it ONCE on the test set (~1 min)
 python -m src.calibration  # STEP 7: reliability diagram, Brier, ECE, Platt / isotonic check (seconds)
 python -m src.explain    # STEP 8: slices, gain vs permutation, SHAP, PDP (~2 min)
+python -m src.fairness   # STEP 9: fairness audit, mitigation chosen on development, before / after on test (~2 min)
 mlflow ui               # browse the logged runs at http://127.0.0.1:5000
 pytest                  # run the tests
 ```
@@ -75,6 +78,12 @@ Details: `reports/calibration/`, `notebooks/07_calibration.ipynb`.
 Explainability (STEP 8): main drivers are education, age, household role, occupation, capital gain and hours;
 `sex` and `race` have zero importance (removed by the Pipeline). Weakest segment: people who are not married
 (recall 67% vs 92% overall). Details: `reports/explain/`, `notebooks/08_explainability.ipynb` (model card in Part H).
+
+Fairness (STEP 9): definition prioritised = equal opportunity (equal recall for wealthy women and men). The final model
+finds 81% of wealthy women vs 94% of wealthy men (gap 12.9 points), mainly through marital status and household role.
+In-processing mitigation (training weight 6 on wealthy women, chosen on the development set): gap 4.3 points on test,
+for +5.3% business cost, PR-AUC 0.753 and less calibrated probabilities. Details: `reports/fairness/`,
+`notebooks/09_fairness.ipynb`.
 
 ## Use of AI assistants
 To be completed in the report (where and how AI assistants were used).
