@@ -95,3 +95,8 @@ final:                        # STEP 6 (src/final.py): freeze -> refit on develo
   model: lightgbm             # decision 35, chosen on the development set before the test set is opened
   reference: logistic         # tuned baseline, measured on the test set for comparison only
   results_dir: reports/final  # tables, test probabilities (reused in STEPS 7 and 9), frozen settings
+
+calibration:                  # STEP 7 (src/calibration.py), Session 7
+  n_bins: 10                  # equal-width bins for the reliability diagram and the ECE (as in the Session 7 notebook)
+  min_folds_better: 4         # a calibrator is kept only if it lowers the Brier score on >= 4 of the 5 development folds
+  results_dir: reports/calibration

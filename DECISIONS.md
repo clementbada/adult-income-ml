@@ -107,7 +107,7 @@ section `imbalance`. Tests: `tests/test_imbalance.py`.
 |---|---|---|---|---|
 | 27 | Business cost = 5 x missed wealthy prospects + 1 x useless calls (X = 5) | Useless call ~ EUR 50 (30 min of advisor time); contacted wealthy prospect ~ EUR 300 expected value (10% x 1% fees on EUR 300k, first year only); ratio ~ 6 rounded down | Different business numbers; fixed advisor capacity | `config.yaml` (`imbalance`) |
 | 28 | The threshold minimises the business cost on out-of-fold predictions: **0.17** for the baseline | Course rule: no universal threshold, chosen on development data, never on the test set (S6); flat minimum (0.13-0.20 within 1% of the lowest cost) and stable per fold (0.12-0.19) | - | `best_threshold`, `src/imbalance.py` |
-| 29 | Remedy kept: **threshold tuning only** (no class weights, no SMOTE) | Same PR-AUC and same business cost (differences ~20, fold std ~80); class weights and SMOTE worsen log-loss (0.328 -> 0.40) and SMOTE creates unrealistic one-hot rows; least invasive (S6 hierarchy) | Another model where a remedy clearly lowers the cost | `config.yaml` (`imbalance.remedy`) |
+| 29 | Remedy kept: **threshold tuning only** (no class weights, no SMOTE) | Same PR-AUC; almost the same business cost (class weights 0.7% cheaper, consistently on 5/5 folds; SMOTE no gain), but class weights and SMOTE worsen log-loss (0.328 -> 0.40) and SMOTE creates unrealistic one-hot rows; least invasive (S6 hierarchy). The deciding reason is the probabilities, not the cost | Another model where a remedy clearly lowers the cost | `config.yaml` (`imbalance.remedy`) |
 | 30 | Sensitivity X = 2, 3, 5, 10: same remedy conclusion for every X; marginal price 3.5 / 5.4 / 7.4 calls per extra wealthy client | Shows the decision does not hinge on the exact assumption | - | notebook 04, Part E |
 | 31 | Result (development, out-of-fold): wealthy found 60% -> 90%, calls 20% -> 43% of prospects, precision 72% -> 51%, business cost -40%; PR-AUC unchanged (0.745) | Threshold changes the operating point, not the ranking (S6) | Test-set confirmation (STEP 6) | notebook 04, Part F |
 | 32 | Honest check of the threshold choice: threshold chosen on 4 folds, cost measured on the 5th (cross-validated threshold) | Choosing and measuring on the same predictions is optimistic (like an in-sample backtest); measured optimism only ~0.6% (12,752 vs 12,681), thresholds 0.16-0.19 | - | `cross_validated_threshold`, notebook 04 F.2 |
@@ -188,3 +188,26 @@ untouched test set.
   `lightgbm`); reliability curve + Brier score from them, no refit needed.
 - **STEP 8 (SHAP):** rebuild the final model with `fit_on_development(cfg, "lightgbm", load_best_params(cfg, "lightgbm"), X_dev, y_dev)`.
 - **STEP 9 (fairness):** test decisions = `test_predictions.csv["lightgbm"] >= 0.15`; `sex` and `race` are in `X_test` (same index).
+
+---
+
+## STEP 7 - Calibration diagnostics of the final model (lead: Eliott)
+Details, numbers and figures: `notebooks/07_calibration.ipynb`. Code: `src/calibration.py`. Settings: `config.yaml`,
+section `calibration`. Results: `reports/calibration/`. Tests: `tests/test_calibration.py`. Run: `python -m src.calibration`
+(a few seconds, no refit: reads the probabilities saved in STEPS 5 and 6).
+
+Course rules (Session 7): ranking and calibration are different questions; reliability diagram + Brier + ECE together;
+learn any calibration map on predictions the model did not train on; compare before / after on unseen data; check segments.
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 45 | Diagnosis on the final model's test probabilities (STEP 6): reliability diagram (10 equal-width bins, counts, histogram), Brier score, ECE; the development out-of-fold curve is shown next to it | Requirement 9; a point built on few people is weak evidence (S7) | - | `src/calibration.py` |
+| 46 | **No recalibration.** Platt and isotonic are learned on development out-of-fold predictions and compared with the same 5 folds (map learned on 4 folds, measured on the 5th); rule: keep one only if it lowers the Brier score on >= 4/5 folds. Both do so on 1/5 folds; Platt learns A = 1.02, B = 0.01 (nothing to correct); isotonic lowers PR-AUC (0.752 -> 0.743) | Same "regular gain" logic as STEPS 4-5; the test set does not choose | Data shift (new population) | `choose_method`, `config.yaml` |
+| 47 | Result on test: Brier **0.102** (constant 23.9% model: 0.182), ECE **0.013** (development: 0.007), mean predicted 24.1% vs 23.9% observed. No systematic over- or under-confidence; local test gaps (45-55% bins over-estimated by 4-6 points, 85% bin under-estimated by 5 points) absent on development and in opposite directions. Probabilities trusted as they are for the 0.15 decision | LightGBM trained on log-loss, no class weights / SMOTE (decisions 29, 36) | 1994 data: re-check on recent data before real use | notebook 07, Parts B-E, H |
+| 48 | Cross-check of the threshold: with calibrated probabilities, call when 1 x (1 - p) <= 5 x p, i.e. p >= 1/6 = 0.167, consistent with 0.15 found on the data (flat zone 0.13-0.20); 0.15 kept | S7 link between calibrated probabilities and business costs | - | `bayes_threshold` |
+| 49 | Calibration by sex on test: men 31.0% predicted vs 30.4% observed, women 10.8% vs 11.5% (small, opposite errors) | S7: overall calibration can hide segment errors | - | notebook 07, Part G |
+
+### Note for STEP 9
+Women's probabilities are slightly too low on average: check whether wealthy women are found as often as wealthy men
+at the threshold 0.15 (recall by sex), and discuss calibration within groups as one of the fairness views.
