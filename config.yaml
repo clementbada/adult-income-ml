@@ -90,3 +90,8 @@ tuning:                       # STEP 5 (src/tuning.py): Optuna, requirement 6
       reg_lambda: {type: float, low: 0.001, high: 100.0, log: true}  # L2 penalty on leaf values (Session 2 idea)
       subsample: {type: float, low: 0.5, high: 1.0}                  # share of rows used by each tree
       colsample_bytree: {type: float, low: 0.2, high: 1.0}           # share of columns used by each tree
+
+final:                        # STEP 6 (src/final.py): freeze -> refit on development -> evaluate ONCE on test
+  model: lightgbm             # decision 35, chosen on the development set before the test set is opened
+  reference: logistic         # tuned baseline, measured on the test set for comparison only
+  results_dir: reports/final  # tables, test probabilities (reused in STEPS 7 and 9), frozen settings

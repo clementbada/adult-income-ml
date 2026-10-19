@@ -107,7 +107,7 @@ section `imbalance`. Tests: `tests/test_imbalance.py`.
 |---|---|---|---|---|
 | 27 | Business cost = 5 x missed wealthy prospects + 1 x useless calls (X = 5) | Useless call ~ EUR 50 (30 min of advisor time); contacted wealthy prospect ~ EUR 300 expected value (10% x 1% fees on EUR 300k, first year only); ratio ~ 6 rounded down | Different business numbers; fixed advisor capacity | `config.yaml` (`imbalance`) |
 | 28 | The threshold minimises the business cost on out-of-fold predictions: **0.17** for the baseline | Course rule: no universal threshold, chosen on development data, never on the test set (S6); flat minimum (0.13-0.20 within 1% of the lowest cost) and stable per fold (0.12-0.19) | - | `best_threshold`, `src/imbalance.py` |
-| 29 | Remedy kept: **threshold tuning only** (no class weights, no SMOTE) | Same PR-AUC; almost the same business cost (class weights 0.7% cheaper, consistently on 5/5 folds; SMOTE no gain), but class weights and SMOTE worsen log-loss (0.328 -> 0.40) and SMOTE creates unrealistic one-hot rows; least invasive (S6 hierarchy). The deciding reason is the probabilities, not the cost | Another model where a remedy clearly lowers the cost | `config.yaml` (`imbalance.remedy`) |
+| 29 | Remedy kept: **threshold tuning only** (no class weights, no SMOTE) | Same PR-AUC and same business cost (differences ~20, fold std ~80); class weights and SMOTE worsen log-loss (0.328 -> 0.40) and SMOTE creates unrealistic one-hot rows; least invasive (S6 hierarchy) | Another model where a remedy clearly lowers the cost | `config.yaml` (`imbalance.remedy`) |
 | 30 | Sensitivity X = 2, 3, 5, 10: same remedy conclusion for every X; marginal price 3.5 / 5.4 / 7.4 calls per extra wealthy client | Shows the decision does not hinge on the exact assumption | - | notebook 04, Part E |
 | 31 | Result (development, out-of-fold): wealthy found 60% -> 90%, calls 20% -> 43% of prospects, precision 72% -> 51%, business cost -40%; PR-AUC unchanged (0.745) | Threshold changes the operating point, not the ranking (S6) | Test-set confirmation (STEP 6) | notebook 04, Part F |
 | 32 | Honest check of the threshold choice: threshold chosen on 4 folds, cost measured on the 5th (cross-validated threshold) | Choosing and measuring on the same predictions is optimistic (like an in-sample backtest); measured optimism only ~0.6% (12,752 vs 12,681), thresholds 0.16-0.19 | - | `cross_validated_threshold`, notebook 04 F.2 |
@@ -163,3 +163,28 @@ Paired differences with the tuned logistic regression (fold by fold): LightGBM +
 - **Decision 29 (STEP 4):** with the same paired comparison as here, class weights lowered the cost on 5/5 folds
   (about -17 per fold, 0.7%) for the logistic regression. "Threshold only" stays the right choice, but the reason is
   the probabilities (log-loss 0.33 -> 0.40), not "same cost".
+
+---
+
+## STEP 6 - Final model, evaluated once on the test set (lead: Eliott)
+Details, numbers and figures: `notebooks/06_final_test_evaluation.ipynb`. Code: `src/final.py`. Settings: `config.yaml`,
+section `final`. Results: `reports/final/`. Tests: `tests/test_final.py`. Run: `python -m src.final` (about 1 minute).
+
+Course rule (Session 5, "CV tuning + test set"): tune with CV -> freeze the modelling choices -> evaluate once on the
+untouched test set.
+
+### Decisions
+| # | Decision | Why | What could invalidate it | Where |
+|---|---|---|---|---|
+| 39 | Final model frozen **before** opening the test set: LightGBM with the STEP 5 hyperparameters. The logistic regression is measured on test as a reference only. Replaces the fallback rule of decision 35 ("no gain on test -> keep the logistic regression") | Choosing between models on the test set would turn it into a selection tool and make the reported score optimistic (S5) | - | `config.yaml` (`final`), `src/final.py` |
+| 40 | The threshold is part of the delivered model: call when P(>50K) >= **0.15** (STEP 4 rule, X = 5, on LightGBM's own out-of-fold predictions); stored in `reports/final/final_model.yaml` | `predict()` answers at 0.5: on test it would call 2,051 people instead of 4,238 and miss far more wealthy prospects (S6) | - | `predict_decision` |
+| 41 | Final Pipeline refitted on the whole development set (80%), then evaluated **once** on the test set | Each CV model saw only 4/5 of the development set; nothing is changed after the test measure | - | `run_final` |
+| 42 | Test results: LightGBM PR-AUC **0.763**, ROC-AUC 0.907, log-loss 0.319; finds 2,143 of 2,336 wealthy (91.7%), calls 43% of people, precision 50.6%, cost 3,060. Logistic regression: 0.750 / 0.902 / 0.326, cost 3,114 (+1.7%) | Same metrics as STEPS 3-5 (requirement 4) | - | `reports/final/test_results.csv` |
+| 43 | CV estimates were honest: test PR-AUC inside CV mean +/- 2 std for both models (+1.2 and +0.4 std), same ranking, same recall | No leakage, no overfitting of the 5 folds by Optuna | - | `reports/final/dev_vs_test.csv` |
+| 44 | Cost of decision 7 measured on test: exact capital amounts give PR-AUC 0.832 and cost 2,775 (-9%); indicators kept | Same-year amounts not available before contact (decision 7) | Bank receives the previous year's tax return | notebook 06, Part E |
+
+### Notes for STEPS 7 to 9
+- **STEP 7 (calibration):** test probabilities of the final model in `reports/final/test_predictions.csv` (column
+  `lightgbm`); reliability curve + Brier score from them, no refit needed.
+- **STEP 8 (SHAP):** rebuild the final model with `fit_on_development(cfg, "lightgbm", load_best_params(cfg, "lightgbm"), X_dev, y_dev)`.
+- **STEP 9 (fairness):** test decisions = `test_predictions.csv["lightgbm"] >= 0.15`; `sex` and `race` are in `X_test` (same index).

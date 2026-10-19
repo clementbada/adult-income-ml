@@ -1,0 +1,12 @@
+model: lightgbm
+capital: indicators
+threshold: 0.15
+params:
+  n_estimators: 350
+  learning_rate: 0.023993242906812727
+  num_leaves: 21
+  min_child_samples: 25
+  reg_lambda: 8.43101393208247
+  subsample: 0.5998368910791798
+  colsample_bytree: 0.6113875507308892
+rule: predict 1 (call) when P(>50K) >= threshold; cost_fn = 5, cost_fp = 1
