@@ -10,6 +10,33 @@ order to offer wealth-management services. The model outputs P(income > 50K | pr
 threshold turns it into "contact / do not contact". Because the decision is about people, the project
 includes a fairness audit on sex (main) and race (secondary).
 
+## Where to find each requirement
+The code in `src/` is the implementation; each notebook calls that code and shows the figures and our reading of them
+(supplementary material). Every decision, with its reason and what could invalidate it, is in `DECISIONS.md`.
+
+| # | Requirement | Code | Notebook | Decisions |
+|---|---|---|---|---|
+| 1 | EDA, problem framing, honest split | `src/data.py` | `01_EDA_framing_split` | 1-11 |
+| 2 | Feature engineering | `src/features.py` | `02_feature_engineering` | 12-19 |
+| 3 | Class imbalance | `src/imbalance.py`, `src/evaluate.py` | `04_class_imbalance` | 27-32 |
+| 4 | Three models, same metrics | `src/models.py`, `src/tuning.py` | `03_baseline_evaluation`, `05_models_tuning` | 20-26, 33-38 |
+| 5 | One Pipeline (preprocessing + model) | `src/features.py`, `src/models.py` | `02`, `03`, `05` | 13, 22 |
+| 6 | Optuna tuning with proper cross-validation | `src/tuning.py` | `05_models_tuning` | 33-38 |
+| 7 | Experiment tracking (MLflow) | `src/tracking.py` (+ every step) | `03`, `05` | 25, 38 |
+| - | Final model, evaluated once on the test set | `src/final.py` | `06_final_test_evaluation` | 39-44 |
+| 8 | Explainability (SHAP) | `src/explain.py` | `08_explainability` | 50-55 |
+| 9 | Calibration diagnostics | `src/calibration.py` | `07_calibration` | 45-49 |
+| 10 | Fairness and bias audit | `src/fairness.py` | `09_fairness` | 56-63 |
+
+## Method in one paragraph
+The data (48,842 people, 52 exact duplicates removed) is split once into a **development set (80%)** and a **test set
+(20%)**, stratified on the target. Every choice (features, remedy for imbalance, model, hyperparameters, threshold,
+calibration, fairness mitigation) is made on the development set with the **same 5 stratified folds** and
+out-of-fold predictions; all preprocessing is fitted inside the folds (one scikit-learn Pipeline). The test set is
+opened **once**, in STEP 6, to measure the frozen final model; STEPS 7-9 only describe that model on it (STEP 9 measures
+the mitigated model once more, its weight having been chosen on the development set). The decision threshold comes from
+a business cost: a missed wealthy prospect costs 5 useless calls (X = 5).
+
 ## Project structure
 ```
 config.yaml          all settings (seed, split ratios, paths, model defaults, Optuna search spaces)
@@ -38,7 +65,7 @@ reports/fairness/    STEP 9 metrics by sex and race, trade-off curve, before / a
 data/                downloaded and split data (created by src/data.py, not committed)
 ```
 
-## Setup (macOS)
+## Setup (macOS, Python 3.12)
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -46,6 +73,10 @@ pip install -r requirements.txt
 ```
 
 ## How to run
+Run from the project root, in this order (each step reads the results of the previous ones). `python -m src.data`
+downloads the data from OpenML, so it needs an internet connection the first time. The result tables and figures of
+every step are already committed in `reports/`, so any step can also be inspected without rerunning the ones before.
+To open the notebooks locally: `pip install jupyter`, then `jupyter notebook notebooks/`.
 ```bash
 python -m src.data      # download the data, remove duplicates, create the dev/test split
 python -m src.features  # fit every preprocessing variant on the dev set (sanity check)
@@ -58,11 +89,19 @@ python -m src.calibration  # STEP 7: reliability diagram, Brier, ECE, Platt / is
 python -m src.explain    # STEP 8: slices, gain vs permutation, SHAP, PDP (~2 min)
 python -m src.fairness   # STEP 9: fairness audit, mitigation chosen on development, before / after on test (~2 min)
 mlflow ui               # browse the logged runs at http://127.0.0.1:5000
-python -m pytest        # run the tests (plain `pytest` may not find the src package)
+pytest                  # run the tests (python -m pytest also works)
 ```
 
 ## Results
-Final model: **LightGBM** (Optuna hyperparameters, threshold 0.15 chosen with the business cost on the development set),
+Development set (5-fold cross-validation, out-of-fold predictions):
+- STEP 3, baseline logistic regression: PR-AUC 0.745 (random ranking: 0.239), but at the default threshold 0.5 it misses
+  40% of the wealthy prospects.
+- STEP 4, business threshold 0.17 (X = 5): wealthy prospects found 60% -> 90%, business cost -40%; class weights (0.7% cheaper)
+  and SMOTE (no gain) both distort the probabilities (log-loss 0.33 -> 0.40), so we keep threshold tuning only.
+- STEP 5, Optuna (nested cross-validation): LightGBM PR-AUC 0.752, Random Forest 0.746, logistic regression 0.745;
+  LightGBM is better than the logistic regression on 5 of 5 folds (PR-AUC and business cost).
+
+Test set (measured once). Final model: **LightGBM** (Optuna hyperparameters, threshold 0.15 chosen with the business cost on the development set),
 evaluated once on the untouched test set (9,758 people, 23.9% at >50K):
 
 | Model | PR-AUC | ROC-AUC | Log-loss | Recall | Precision | Business cost |
