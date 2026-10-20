@@ -126,8 +126,7 @@ for +5.3% business cost, PR-AUC 0.753 and less calibrated probabilities. Details
 
 ## Use of AI assistants
 We used Claude (Anthropic) as a coding assistant throughout the project. Our programming experience was limited, so
-Claude helped us write and structure most of the code (`src/` modules, tests, notebooks) and explained the methods
-step by step. We set one rule from the start: use only the notions and tools seen in the course sessions, and flag
+Claude helped us write and structure most of the code (`src/` modules, tests, notebooks). We set one rule from the start: use only the notions and tools seen in the course sessions, and flag
 anything outside them.
 
 Every result was checked and challenged against the course before being kept: we re-ran the scripts, compared each
