@@ -58,7 +58,7 @@ python -m src.calibration  # STEP 7: reliability diagram, Brier, ECE, Platt / is
 python -m src.explain    # STEP 8: slices, gain vs permutation, SHAP, PDP (~2 min)
 python -m src.fairness   # STEP 9: fairness audit, mitigation chosen on development, before / after on test (~2 min)
 mlflow ui               # browse the logged runs at http://127.0.0.1:5000
-pytest                  # run the tests
+python -m pytest        # run the tests (plain `pytest` may not find the src package)
 ```
 
 ## Results
