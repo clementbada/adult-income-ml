@@ -5,7 +5,7 @@ Format of the course: what we did, why, and what could invalidate it. This file 
 
 ---
 
-## STEP 1 - Problem framing, EDA, leakage audit, split (lead: Clément)
+## STEP 1 - Problem framing, EDA, leakage audit, split (done together by the three members)
 Details, numbers and figures: `notebooks/01_EDA_framing_split.ipynb`. Code: `src/data.py`.
 
 ### Framing
@@ -45,7 +45,7 @@ group rare `native-country` values (38 of 41 countries below 0.5%).
 
 ---
 
-## STEP 2 - Feature engineering (lead: Eliott)
+## STEP 2 - Feature engineering (done together by the three members)
 Details, numbers and figures: `notebooks/02_feature_engineering.ipynb`. Code: `src/features.py`.
 Settings: `config.yaml`, section `features`. Tests: `tests/test_features.py`.
 
@@ -74,7 +74,7 @@ part-time below 35 hours), not tuned on the target, and the shape is re-checked 
 
 ---
 
-## STEP 3 - Baseline, evaluation module, experiment tracking (lead: Clément)
+## STEP 3 - Baseline, evaluation module, experiment tracking (done together by the three members)
 Details, numbers and figures: `notebooks/03_baseline_evaluation.ipynb`. Code: `src/evaluate.py`, `src/models.py`,
 `src/tracking.py`. Settings: `config.yaml`, sections `models`, `evaluation`, `tracking`. Tests: `tests/test_models.py`.
 
@@ -214,7 +214,7 @@ at the threshold 0.15 (recall by sex), and discuss calibration within groups as 
 
 ---
 
-## STEP 8 - Diagnostics and explainability of the final model (lead: Eliott)
+## STEP 8 - Diagnostics and explainability of the final model (lead: Clément)
 Details, numbers and figures: `notebooks/08_explainability.ipynb`. Code: `src/explain.py`. Settings: `config.yaml`,
 section `explain`. Results: `reports/explain/`. Tests: `tests/test_explain.py`. Run: `python -m src.explain` (about 2 minutes).
 
